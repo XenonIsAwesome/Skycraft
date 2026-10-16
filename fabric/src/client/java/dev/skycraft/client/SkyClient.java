@@ -148,6 +148,7 @@ public final class SkyClient {
 	// closed for good: saved and shut down the normal way. -Dskycraft.quitWithSkyrim=false keeps it
 	// running instead (development: restarting Skyrim without restarting Minecraft).
 	private static final boolean QUIT_WITH_SKYRIM = Boolean.parseBoolean(System.getProperty("skycraft.quitWithSkyrim", "true"));
+	private static final boolean LINUX = !System.getProperty("os.name", "").toLowerCase().contains("win");
 	private static long skyrimGoneSince;
 	private static long nextSkyrimCheck;
 	// Started hidden by Skyrim but never connected: nobody can see or use this Minecraft, and it
@@ -169,13 +170,16 @@ public final class SkyClient {
 			return;
 		}
 		nextSkyrimCheck = now + 1000;
-		if (ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false)) {
+		// Native Linux Minecraft + Skyrim under Wine: the pid in the header is a Wine pid that Linux
+		// can't see, so go by Skyrim's heartbeat instead (it can stall for a while in loading screens).
+		boolean alive = LINUX ? SkyLink.active() : ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false);
+		if (alive) {
 			skyrimGoneSince = 0;
 			return;
 		}
 		if (skyrimGoneSince == 0) {
 			skyrimGoneSince = now;
-		} else if (now - skyrimGoneSince > 5000) {
+		} else if (now - skyrimGoneSince > (LINUX ? 60_000 : 5000)) {
 			SkyCraft.LOG.info("SkyCraft: Skyrim (pid {}) has closed; saving and quitting", pid);
 			minecraft.stop();
 		}

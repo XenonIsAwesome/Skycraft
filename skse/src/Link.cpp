@@ -243,7 +243,21 @@ namespace skycraft
 		}
 		auto& beat = At<proto::Header>(proto::kOffHeader)->mcHeartbeatMs;
 		const auto last = Atomic(beat).load(std::memory_order_acquire);
-		return last != 0 && ::GetTickCount64() - last < kMcTimeoutMs;
+		// Alive = the value changed recently by OUR clock. Comparing it with GetTickCount64() directly
+		// breaks when Minecraft is a native Linux process: Wine's tick count and Linux's monotonic
+		// clock don't share a zero point there. A value never seen to change counts as dead.
+		static std::uint64_t seen = 0;
+		static std::uint64_t changedAt = 0; // 0 until a change has been observed
+		static bool          first = true;
+		const auto           now = ::GetTickCount64();
+		if (first) {
+			first = false;
+			seen = last; // possibly stale from an earlier run: wait for it to move
+		} else if (last != seen) {
+			seen = last;
+			changedAt = now;
+		}
+		return last != 0 && changedAt != 0 && now - changedAt < kMcTimeoutMs;
 	}
 
 	std::uint32_t Link::McPid() const

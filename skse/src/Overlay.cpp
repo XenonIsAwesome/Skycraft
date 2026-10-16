@@ -241,9 +241,17 @@ float4 PSMain(VSOut i) : SV_Target {
 			if (diag) {
 				nextDiag = nowMs + 10000;
 			}
-			if (!Link::Get().Valid() || !Link::Get().McAlive() || !st.mcInWorld || !InitResources(a_swapChain)) {
+			// Linux bridge: the Minecraft heartbeat / in-world flags don't reliably reach us there, so
+			// draw whenever a frame has been published (SKYCRAFT_OVERLAY_GATE=1 restores the checks).
+			static const bool gate = [] {
+				wchar_t buf[8]{};
+				return ::GetEnvironmentVariableW(L"SKYCRAFT_OVERLAY_GATE", buf, 8) > 0 && buf[0] == L'1';
+			}();
+			const bool alive = Link::Get().McAlive();
+			const bool inWorld = st.mcInWorld;
+			if (!Link::Get().Valid() || (gate && (!alive || !inWorld)) || !InitResources(a_swapChain)) {
 				if (diag) {
-					logger::info("overlay idle: valid={} mcAlive={} mcInWorld={}", Link::Get().Valid(), Link::Get().McAlive(), bool(st.mcInWorld));
+					logger::info("overlay idle: valid={} mcAlive={} mcInWorld={}", Link::Get().Valid(), alive, inWorld);
 				}
 				return;
 			}

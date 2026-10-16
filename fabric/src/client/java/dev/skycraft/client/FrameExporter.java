@@ -27,6 +27,7 @@ public final class FrameExporter {
 	private static final Staging[] staging = new Staging[STAGING];
 	private static long nextFrameId = 1;
 	private static boolean loggedFormat;
+	private static long captured, shipped, nextStatsLog;
 
 	private static final class Staging {
 		GpuBuffer buffer;
@@ -41,6 +42,11 @@ public final class FrameExporter {
 
 	public static void capture(Minecraft minecraft) {
 		shipReadyFrames();
+		long now = System.currentTimeMillis();
+		if (now >= nextStatsLog) {
+			nextStatsLog = now + 10_000;
+			SkyCraft.LOG.info("SkyCraft: overlay frames: {} captured, {} shipped to Skyrim", captured, shipped);
+		}
 
 		RenderTarget target = minecraft.gameRenderer.mainRenderTarget();
 		GpuTexture color = target.getColorTexture();
@@ -86,6 +92,7 @@ public final class FrameExporter {
 			slot.height = height;
 		}
 		final Staging captured = slot;
+		FrameExporter.captured++;
 		captured.state = PENDING;
 		captured.frameId = nextFrameId++;
 		RenderSystem.getDevice().createCommandEncoder().copyTextureToBuffer(color, captured.buffer, 0L, () -> captured.state = READY, 0);
@@ -110,6 +117,7 @@ public final class FrameExporter {
 				MemorySegment.copy(src, 0, shm, SkyLink.overlayBackSlotOffset(), Math.min(bytes, src.byteSize()));
 			}
 			SkyLink.publishOverlay(newest.width, newest.height, true, newest.frameId);
+			shipped++;
 		}
 		// Anything older than what we just shipped is useless now.
 		for (Staging s : staging) {

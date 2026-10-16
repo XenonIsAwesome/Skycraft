@@ -234,12 +234,28 @@ float4 PSMain(VSOut i) : SV_Target {
 				st.viewportW = static_cast<int>(desc.BufferDesc.Width);
 				st.viewportH = static_cast<int>(desc.BufferDesc.Height);
 			}
+			// Diagnostics: say every 10 s why nothing is drawn (the overlay silently skips otherwise).
+			static ULONGLONG nextDiag = 0;
+			const auto       nowMs = ::GetTickCount64();
+			const bool       diag = nowMs >= nextDiag;
+			if (diag) {
+				nextDiag = nowMs + 10000;
+			}
 			if (!Link::Get().Valid() || !Link::Get().McAlive() || !st.mcInWorld || !InitResources(a_swapChain)) {
+				if (diag) {
+					logger::info("overlay idle: valid={} mcAlive={} mcInWorld={}", Link::Get().Valid(), Link::Get().McAlive(), bool(st.mcInWorld));
+				}
 				return;
 			}
 			UploadLatestFrame();
 			if (!haveFrame || st.skyrimMenuOpen) {
+				if (diag) {
+					logger::info("overlay idle: haveFrame={} skyrimMenuOpen={}", haveFrame, bool(st.skyrimMenuOpen));
+				}
 				return;
+			}
+			if (diag) {
+				logger::info("overlay drawing ({}x{} texture, back buffer {}x{})", texW, texH, int(st.viewportW), int(st.viewportH));
 			}
 
 			ID3D11Texture2D* backBuffer = nullptr;

@@ -48,10 +48,22 @@ SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 {
 	SKSE::Init(a_skse, { .trampoline = true, .trampolineSize = 1024 });
 	SetupLog();
-	skycraft::CrashLog::Install();
-	logger::info("SkyCraft {} loading (runtime {})", "0.1.2", a_skse->RuntimeVersion().string());
-	SKSE::GetMessagingInterface()->RegisterListener(OnMessage);
-	// As early as possible: Minecraft takes about as long to start as Skyrim does to reach its menu.
-	skycraft::Launcher::StartMinecraft();
+	logger::info("SkyCraft 0.1.2: SKSE::Init + log ok");
+	try {
+		skycraft::CrashLog::Install();
+		logger::info("crash handler installed");
+		logger::info("runtime {}", a_skse->RuntimeVersion().string());
+		SKSE::GetMessagingInterface()->RegisterListener(OnMessage);
+		logger::info("messaging listener registered; starting Minecraft launcher");
+		// As early as possible: Minecraft takes about as long to start as Skyrim does to reach its menu.
+		skycraft::Launcher::StartMinecraft();
+		logger::info("load complete");
+	} catch (const std::exception& e) {
+		logger::critical("load failed: {}", e.what());
+		return false;
+	} catch (...) {
+		logger::critical("load failed: unknown exception");
+		return false;
+	}
 	return true;
 }

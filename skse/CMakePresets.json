@@ -9,6 +9,7 @@
       "toolchainFile": "${sourceDir}/../.tools/vcpkg/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
         "VCPKG_TARGET_TRIPLET": "x64-windows-static-md",
+        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/triplets",
         "SKYCRAFT_DEPLOY_DIR": "$env{LOCALAPPDATA}/ModOrganizer/Skyrim Special Edition/mods/SkyCraft"
       }
     }

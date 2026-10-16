@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
+# Wine/Proton's built-in msvcp140 predates MSVC 14.40's constexpr std::mutex and crashes on the first
+# lock (SkyCraft.log stays empty, SKSE reports "fatal error occurred while loading plugin").
+add_compile_definitions(_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR)
+
 # CommonLibSSE-NG (SE + AE; VR off to keep the build smaller)
 set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(ENABLE_SKYRIM_VR OFF CACHE BOOL "" FORCE)

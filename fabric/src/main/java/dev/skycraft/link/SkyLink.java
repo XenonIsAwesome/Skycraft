@@ -131,8 +131,27 @@ public final class SkyLink {
 			return false;
 		}
 		long beat = (long) LONG.getAcquire(s, OFF_HEADER + H_SKYRIM_HEARTBEAT);
-		return tickCount() - beat < HEARTBEAT_TIMEOUT_MS;
+		if (IS_WINDOWS) {
+			return tickCount() - beat < HEARTBEAT_TIMEOUT_MS;
+		}
+		// Native Linux Minecraft with Skyrim under Wine: Wine's tick count and our monotonic clock
+		// don't share a zero point, so judge by whether the value moved recently on OUR clock.
+		long now = System.nanoTime() / 1_000_000L;
+		synchronized (SkyLink.class) {
+			if (!beatObserved) {
+				beatObserved = true;
+				lastBeat = beat; // possibly stale from an earlier run: wait for it to move
+			} else if (beat != lastBeat) {
+				lastBeat = beat;
+				beatChangedAt = now;
+			}
+			return beat != 0 && beatChangedAt != 0 && now - beatChangedAt < HEARTBEAT_TIMEOUT_MS;
+		}
 	}
+
+	private static boolean beatObserved;
+	private static long lastBeat;
+	private static long beatChangedAt;
 
 	/** Bumps whenever a (new) Skyrim instance is on the other end: everything Skyrim caches must be resent. */
 	public static int generation() {

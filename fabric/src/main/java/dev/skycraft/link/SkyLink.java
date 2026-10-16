@@ -34,7 +34,7 @@ public final class SkyLink {
 	private static final MethodHandle OPEN_FILE_MAPPING;
 	// OpenFileMappingW's GetLastError, captured right after the call (the JVM may change it later).
 	private static final java.lang.foreign.StructLayout CALL_STATE = Linker.Option.captureStateLayout();
-	private static final VarHandle LAST_ERROR = CALL_STATE.varHandle(java.lang.foreign.MemoryLayout.PathElement.groupElement("GetLastError"));
+	private static final VarHandle LAST_ERROR = CALL_STATE.varHandle(java.lang.foreign.MemoryLayout.PathElement.groupElement(IS_WINDOWS ? "GetLastError" : "errno"));
 	private static final MemorySegment OPEN_STATE = Arena.global().allocate(CALL_STATE);
 	private static int lastOpenError = -1;
 	private static final MethodHandle MAP_VIEW_OF_FILE;

@@ -134,6 +134,7 @@ Minecraft has priority. These keys still go to Skyrim:
 | **G** | Skyrim activate: doors, NPCs (talk), containers, levers, furniture |
 | **Esc** | Skyrim menu (or closes an open Minecraft screen) |
 | **J** / **M** | Skyrim journal / map |
+| **Tab** | Skyrim inventory |
 | **H** | Skyrim wait |
 | **F9** | Skyrim quickload (save from the Esc menu) |
 | **~** | Skyrim console |

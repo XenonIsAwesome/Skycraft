@@ -35,6 +35,7 @@ namespace skycraft
 
 		// Keys Skyrim keeps while Minecraft drives the player. Everything else is Minecraft's.
 		constexpr std::uint32_t kDikEscape = 0x01;   // Skyrim journal / system menu (or closes an MC screen)
+		constexpr std::uint32_t kDikTab = 0x0F;      // Skyrim inventory / pause menu
 		constexpr std::uint32_t kDikConsole = 0x29;  // Skyrim console
 		constexpr std::uint32_t kDikG = 0x22;        // Skyrim activate: doors, NPCs, containers, items
 		constexpr std::uint32_t kDikH = 0x23;        // Skyrim wait (T is Minecraft chat)
@@ -45,7 +46,7 @@ namespace skycraft
 
 		bool IsSkyrimMenuKey(std::uint32_t a_code)
 		{
-			return a_code == kDikEscape || a_code == kDikConsole || a_code == kDikJ || a_code == kDikM || a_code == kDikF9;
+			return a_code == kDikEscape || a_code == kDikTab || a_code == kDikConsole || a_code == kDikJ || a_code == kDikM || a_code == kDikF9;
 		}
 
 		float lookDx = 0.0f;

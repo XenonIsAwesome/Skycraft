@@ -251,7 +251,7 @@ float4 PSMain(VSOut i) : SV_Target {
 			const bool inWorld = st.mcInWorld;
 			if (!Link::Get().Valid() || (gate && (!alive || !inWorld)) || !InitResources(a_swapChain)) {
 				if (diag) {
-					logger::info("overlay idle: valid={} mcAlive={} mcInWorld={}", Link::Get().Valid(), alive, inWorld);
+					logger::info("overlay idle: valid={} mcAlive={} mcInWorld={} gate={} (renderer {})", Link::Get().Valid(), alive, inWorld, gate, initFailed ? "failed" : "ok");
 				}
 				return;
 			}

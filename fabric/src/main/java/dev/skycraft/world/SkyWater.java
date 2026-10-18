@@ -3,6 +3,7 @@ package dev.skycraft.world;
 import dev.skycraft.link.SkyLink;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 import org.jspecify.annotations.Nullable;
@@ -93,5 +94,49 @@ public final class SkyWater {
 			return -1.0F;
 		}
 		return depth;
+	}
+
+	/**
+	 * Where the segment first enters Skyrim water from above (on the water surface), or null if it
+	 * doesn't, or starts under the surface. Lets boats be placed on lakes and the sea, where vanilla's
+	 * fluid ray cast sees no water to hit.
+	 */
+	public static @Nullable Vec3 surfaceHit(BlockGetter level, Vec3 from, Vec3 to) {
+		if (grid == null) {
+			return null;
+		}
+		double len = from.distanceTo(to);
+		int steps = (int) Math.ceil(len / 0.1);
+		if (steps <= 0) {
+			return null;
+		}
+		Vec3 prev = from;
+		for (int i = 0; i <= steps; i++) {
+			Vec3 p = from.lerp(to, (double) i / steps);
+			if (inWater(level, p)) {
+				if (i == 0) {
+					return null;
+				}
+				Vec3 lo = prev, hi = p;
+				for (int k = 0; k < 8; k++) {
+					Vec3 mid = lo.lerp(hi, 0.5);
+					if (inWater(level, mid)) {
+						hi = mid;
+					} else {
+						lo = mid;
+					}
+				}
+				double s = surfaceAt((int) Math.floor(hi.x), (int) Math.floor(hi.z));
+				return new Vec3(hi.x, Double.isNaN(s) ? hi.y : s, hi.z);
+			}
+			prev = p;
+		}
+		return null;
+	}
+
+	private static boolean inWater(BlockGetter level, Vec3 p) {
+		int x = (int) Math.floor(p.x), z = (int) Math.floor(p.z);
+		double s = surfaceAt(x, z);
+		return !Double.isNaN(s) && p.y < s && level.getBlockState(BlockPos.containing(p)).isAir();
 	}
 }

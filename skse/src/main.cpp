@@ -48,7 +48,7 @@ SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 {
 	SKSE::Init(a_skse, { .trampoline = true, .trampolineSize = 1024 });
 	SetupLog();
-	logger::info("SkyCraft 0.1.2: SKSE::Init + log ok");
+	logger::info("SkyCraft 0.1.2 (built {} {}): SKSE::Init + log ok", __DATE__, __TIME__);
 	try {
 		skycraft::CrashLog::Install();
 		logger::info("crash handler installed");

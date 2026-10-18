@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.At;
 /** Boats float on Skyrim's water (lakes, rivers, the sea) like on Minecraft water. See {@link SkyWater}. */
 @Mixin(AbstractBoat.class)
 public abstract class AbstractBoatMixin {
-	private static final float BOAT_RAISE = 0.12F;
+	private static final float BOAT_RAISE = 0.1F;
 
 	@WrapOperation(
 		method = {"getWaterLevelAbove", "checkInWater", "isUnderwater", "checkFallDamage"},
@@ -40,7 +40,7 @@ public abstract class AbstractBoatMixin {
 	)
 	private float skycraft$skyrimWaterHeight(FluidState state, BlockGetter level, BlockPos pos, Operation<Float> original) {
 		float height = SkyWater.active() ? SkyWater.substitutedHeight(level, pos) : -1.0F;
-		// Skyrim's own water surface is drawn over the hull's bottom; ride a little higher than Minecraft boats do.
-		return height >= 0.0F ? Math.max(0.0F, height - BOAT_RAISE) : original.call(state, level, pos);
+		// A higher water level makes the boat float higher; Skyrim's surface is drawn a little above where Minecraft's would be.
+		return height >= 0.0F ? height + BOAT_RAISE : original.call(state, level, pos);
 	}
 }

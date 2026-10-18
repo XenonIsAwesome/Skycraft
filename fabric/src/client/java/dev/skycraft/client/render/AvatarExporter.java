@@ -592,7 +592,7 @@ final class AvatarExporter implements SubmitNodeCollector {
 	private @Nullable Batch batchFor(RenderType renderType) {
 		RenderTypeAccessor type = (RenderTypeAccessor) renderType;
 		String name = type.skycraft$name();
-		if (name.contains("glint") || name.contains("outline") || name.contains("shadow")) {
+		if (name.contains("glint") || name.contains("outline") || name.contains("shadow") || name.contains("water_mask")) {
 			return null;
 		}
 		Object binding = ((RenderSetupAccessor) (Object) type.skycraft$state()).skycraft$textures().get("Sampler0");

@@ -192,6 +192,23 @@ namespace skycraft
 				r.formId = actor->GetFormID();
 				r.flags = (actor->IsHostileToActor(a_player) ? proto::kActorHostile : 0u) | (actor->IsDead() ? proto::kActorDead : 0u) |
 				          (actor->IsEssential() ? proto::kActorEssential : 0u) | (actor->IsInCombat() ? proto::kActorInCombat : 0u);
+				// Hearthfire's cows and goats; matched by race name as editor IDs aren't in the game's data.
+				if (const auto* race = actor->GetRace()) {
+					// Race name, race editor ID and the actor's own name: whichever says cow or goat.
+					const char* names[] = { race->GetName(), race->GetFormEditorID(), actor->GetDisplayFullName() };
+					for (const char* n : names) {
+						std::string lower = n ? n : "";
+						std::ranges::transform(lower, lower.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+						if (lower.find("cow") != std::string::npos || lower.find("goat") != std::string::npos) {
+							r.flags |= proto::kActorMilkable;
+							break;
+						}
+					}
+					static std::unordered_set<std::uint32_t> logged;
+					if (logged.insert(r.formId).second && (r.flags & proto::kActorMilkable)) {
+						logger::info("milkable actor {:08X}: race '{}' / '{}'", r.formId, race->GetName() ? race->GetName() : "", race->GetFormEditorID() ? race->GetFormEditorID() : "");
+					}
+				}
 				const auto mc = SkyToMc(pos);
 				r.x = static_cast<float>(mc.x);
 				r.y = static_cast<float>(mc.y);

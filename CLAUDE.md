@@ -20,7 +20,9 @@ Worktrees are separate checkouts: gitignored and submodule content from the main
    In the main checkout, follow the README (`git clone https://github.com/microsoft/vcpkg .tools\vcpkg`, then bootstrap).
 3. **C++ generator**: `skse/CMakePresets.json` asks for "Visual Studio 18 2026", but this machine has
    only Visual Studio 2022 Build Tools. Make sure the gitignored `skse/CMakeUserPresets.json` exists
-   (copy it from the main checkout or recreate it) and use its presets:
+   (create it if missing; it is a version-6 presets file with configure preset `vs2022` that
+   `inherits` `default` and sets `generator` to `Visual Studio 17 2022`, plus build preset
+   `release-vs2022` for it, configuration `RelWithDebInfo`) and use its presets:
    `cmake --preset vs2022` then `cmake --build --preset release-vs2022`.
    If CMake complains the generator "does not match the generator used previously", delete the gitignored `skse/build` and configure again.
    `tools/package.ps1` uses the `default` presets, so it fails here unless VS 2026 is installed.

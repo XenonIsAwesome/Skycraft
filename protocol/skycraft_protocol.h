@@ -206,6 +206,7 @@ namespace skycraft::proto
 		kActorDead = 1u << 1,
 		kActorEssential = 1u << 2,
 		kActorInCombat = 1u << 3,
+		kActorMilkable = 1u << 4,  // a cow or goat: an empty bucket right-clicked on it fills with milk
 	};
 
 	struct ActorRecord

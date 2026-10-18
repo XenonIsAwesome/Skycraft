@@ -8,6 +8,7 @@
     "BlockCollisionsMixin",
     "BlockStateBaseMixin",
     "BoatItemMixin",
+    "BucketItemMixin",
     "EntityFluidInteractionMixin",
     "EntityPickMixin",
     "EntitySwimMixin",

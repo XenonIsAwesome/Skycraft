@@ -550,6 +550,10 @@ public final class SkyLink {
 		public boolean hostile() {
 			return (this.flags & ACTOR_HOSTILE) != 0;
 		}
+
+		public boolean milkable() {
+			return (this.flags & ACTOR_MILKABLE) != 0;
+		}
 	}
 
 	/** Seqlock read of the actor table. Returns false (leaving {@code out} empty) on a torn read. */

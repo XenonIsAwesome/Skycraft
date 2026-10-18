@@ -116,6 +116,7 @@ public final class SkyCombat {
 			if (proxy == null) {
 				proxy = new SkyrimActorEntity(SKYRIM_ACTOR, level);
 				proxy.setFormId(a.formId());
+				proxy.setMilkable(a.milkable());
 				proxy.setSize(a.width(), a.height());
 				proxy.snapTo(a.x(), a.y(), a.z(), a.yaw(), 0.0F);
 				if (!a.name().isEmpty()) {
@@ -128,6 +129,7 @@ public final class SkyCombat {
 				continue;
 			}
 			proxy.setSize(a.width(), a.height());
+			proxy.setMilkable(a.milkable());
 			proxy.setPos(a.x(), a.y(), a.z());
 			proxy.setYRot(a.yaw());
 			proxy.setYHeadRot(a.yaw());

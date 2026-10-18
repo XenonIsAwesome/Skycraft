@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.At;
 /** Boats float on Skyrim's water (lakes, rivers, the sea) like on Minecraft water. See {@link SkyWater}. */
 @Mixin(AbstractBoat.class)
 public abstract class AbstractBoatMixin {
-	private static final float BOAT_RAISE = 0.1F;
+	private static final float BOAT_RAISE = 0.1F + 1.5F / 16.0F; // 1.5 texture pixels more than the first nudge
 
 	@WrapOperation(
 		method = {"getWaterLevelAbove", "checkInWater", "isUnderwater", "checkFallDamage"},

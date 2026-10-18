@@ -115,4 +115,5 @@ New-Zip "$dist\SkyCraft-$version-pdb.zip" ([ordered]@{ "SkyCraft.pdb" = $pdb })
 Copy-Item $jar "$dist\skycraft-fabric-$version.jar"
 Remove-Item "$dist\SkyCraft-Minecraft.zip"
 
+Get-ChildItem $dll | ForEach-Object { "{0,-40} {1,12:N0} bytes" -f $_.Name, $_.Length }
 Get-ChildItem $dist | ForEach-Object { "{0,-40} {1,12:N0} bytes" -f $_.Name, $_.Length }

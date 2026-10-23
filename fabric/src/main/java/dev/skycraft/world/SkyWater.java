@@ -1,5 +1,6 @@
 package dev.skycraft.world;
 
+import dev.skycraft.link.Proto;
 import dev.skycraft.link.SkyLink;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.BlockGetter;
@@ -15,7 +16,7 @@ import org.jspecify.annotations.Nullable;
  * there as in Minecraft water. Only entity physics sees it; no blocks change.
  */
 public final class SkyWater {
-	private record Grid(int originX, int originZ, int size, float[] surface) {
+	private record Grid(int originX, int originZ, int size, float[] surface, byte[] liquid, byte[] ground) {
 	}
 
 	private static volatile @Nullable Grid grid;
@@ -27,7 +28,7 @@ public final class SkyWater {
 	public static void refresh() {
 		SkyLink.WaterGrid read = SkyLink.readWaterGrid();
 		if (read != null) {
-			grid = new Grid(read.originX, read.originZ, read.size, read.surface);
+			grid = new Grid(read.originX, read.originZ, read.size, read.surface, read.liquid, read.ground);
 		}
 	}
 
@@ -51,6 +52,25 @@ public final class SkyWater {
 		}
 		float s = g.surface()[dz * g.size() + dx];
 		return s < -1.0e20F ? Double.NaN : s;
+	}
+
+	private static int index(Grid g, int x, int z) {
+		int dx = x - g.originX(), dz = z - g.originZ();
+		return dx < 0 || dz < 0 || dx >= g.size() || dz >= g.size() ? -1 : dz * g.size() + dx;
+	}
+
+	/** True if the Skyrim water over this column is lava. */
+	public static boolean lavaAt(int x, int z) {
+		Grid g = grid;
+		int i = g == null ? -1 : index(g, x, z);
+		return i >= 0 && g.liquid()[i] == Proto.LIQUID_LAVA && !Double.isNaN(surfaceAt(x, z));
+	}
+
+	/** True if Skyrim's terrain in this column is snow. */
+	public static boolean snowAt(int x, int z) {
+		Grid g = grid;
+		int i = g == null ? -1 : index(g, x, z);
+		return i >= 0 && g.ground()[i] == Proto.GROUND_SNOW;
 	}
 
 	/** How much of this block (0..1) is under Skyrim's water; 0 above the surface. */

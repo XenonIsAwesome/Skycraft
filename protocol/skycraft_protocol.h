@@ -13,7 +13,7 @@
 namespace skycraft::proto
 {
 	inline constexpr std::uint32_t kMagic = 0x43594B53;  // "SKYC"
-	inline constexpr std::uint32_t kVersion = 11;
+	inline constexpr std::uint32_t kVersion = 12;
 	inline constexpr wchar_t       kMappingName[] = L"Local\\SkyCraft_v1";
 
 	// 1 Minecraft block == 70 Skyrim units (Skyrim player ~128 units tall, MC player 1.8 blocks).
@@ -66,12 +66,26 @@ namespace skycraft::proto
 	inline constexpr std::uint32_t kWaterGridSize = 16;
 	inline constexpr float         kNoWater = -1.0e30f;
 
+	enum WaterKind : std::uint8_t
+	{
+		kLiquidWater = 0,
+		kLiquidLava = 1,  // a water form that damages whoever is in it
+	};
+
+	enum GroundKind : std::uint8_t
+	{
+		kGroundOther = 0,
+		kGroundSnow = 1,  // landscape texture of the snow material
+	};
+
 	struct WaterGrid
 	{
 		std::uint32_t seq;
 		std::int32_t  originX, originZ;  // Minecraft block column of surface[0]
 		std::uint32_t worldId;           // as in SkyState
 		float         surface[kWaterGridSize * kWaterGridSize];  // [z * size + x]: MC y of the water surface; kNoWater: none
+		std::uint8_t  liquid[kWaterGridSize * kWaterGridSize];   // WaterKind of that surface, for buckets
+		std::uint8_t  ground[kWaterGridSize * kWaterGridSize];   // GroundKind of the terrain in that column
 	};
 	static_assert(sizeof(WaterGrid) <= 0xC00);
 
@@ -207,6 +221,7 @@ namespace skycraft::proto
 		kActorEssential = 1u << 2,
 		kActorInCombat = 1u << 3,
 		kActorMilkable = 1u << 4,  // a cow or goat: an empty bucket right-clicked on it fills with milk
+		kActorFish = 1u << 5,      // a fish (actor, or an activator listed here): Minecraft can bucket it
 	};
 
 	struct ActorRecord
@@ -246,6 +261,7 @@ namespace skycraft::proto
 		kEvExplosion = 3,   // a Minecraft explosion (TNT, creeper, ...): a/b/c = centre (MC coords), d = radius (blocks)
 		kEvArrowStuck = 4,  // an arrow stuck in a Skyrim actor: formId, a/b/c = where it hit (MC coords), d = flight yaw,
 		                    // flags = flight pitch (float bits), weapon = arrow texture (0 plain, 1 tipped, 2 spectral)
+		kEvCatchActor = 6,  // the player bucketed an actor (a fish): formId; Skyrim removes it from the world
 		kEvSkillUse = 5,    // the player used a Skyrim skill in Minecraft: formId = Skyrim skill (ActorValue: 9 Block,
 		                    // 10 Smithing, 11 Heavy Armor, 12 Light Armor), a = uses (as Skyrim's AdvanceSkill counts them)
 	};

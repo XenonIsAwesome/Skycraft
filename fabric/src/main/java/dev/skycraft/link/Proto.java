@@ -8,7 +8,7 @@ public final class Proto {
 	}
 
 	public static final int MAGIC = 0x43594B53;
-	public static final int VERSION = 11;
+	public static final int VERSION = 12;
 	// A second client on the same PC (multiplayer testing) talks to its own stand-in Skyrim:
 	// -Dskycraft.link=Local\SkyCraft_guest (see tools/fake_guest.py).
 	public static final String MAPPING_NAME = System.getProperty("skycraft.link", "Local\\SkyCraft_v1");
@@ -26,6 +26,9 @@ public final class Proto {
 	public static final long OFF_WATER_GRID = 0x400;
 	public static final int WATER_GRID_SIZE = 16;
 	public static final long WG_SEQ = 0x0, WG_ORIGIN_X = 0x4, WG_ORIGIN_Z = 0x8, WG_WORLD_ID = 0xC, WG_SURFACE = 0x10;
+	public static final long WG_LIQUID = WG_SURFACE + 4L * WATER_GRID_SIZE * WATER_GRID_SIZE;
+	public static final long WG_GROUND = WG_LIQUID + (long) WATER_GRID_SIZE * WATER_GRID_SIZE;
+	public static final byte LIQUID_LAVA = 1, GROUND_SNOW = 1;
 	public static final long OFF_OVERLAY_CTL = 0x300;
 	public static final long OFF_OVERLAY_SLOT_HDR = 0x340;
 	public static final long OFF_INPUT_RING = 0x1000;
@@ -64,6 +67,7 @@ public final class Proto {
 	public static final int ACTOR_ESSENTIAL = 1 << 2;
 	public static final int ACTOR_IN_COMBAT = 1 << 3;
 	public static final int ACTOR_MILKABLE = 1 << 4;
+	public static final int ACTOR_FISH = 1 << 5;
 
 	// Event ring (relative to OFF_EVENT_RING)
 	public static final int EVENT_RING_ENTRIES = 512;
@@ -76,6 +80,7 @@ public final class Proto {
 	public static final int EV_EXPLOSION = 3;
 	public static final int EV_ARROW_STUCK = 4;
 	public static final int EV_SKILL_USE = 5;
+	public static final int EV_CATCH_ACTOR = 6;
 	// Skyrim skills (ActorValue) Minecraft reports use of; weapon skills come from EV_HIT_ACTOR.
 	public static final int SKILL_BLOCK = 9;
 	public static final int SKILL_SMITHING = 10;

@@ -1,10 +1,13 @@
 #include "Game.h"
 
+#include <unordered_set>
+
 namespace skycraft
 {
 	namespace
 	{
 		constexpr float kActorRange = 80.0f * static_cast<float>(proto::kUnitsPerBlock);  // stand-ins exist this far out
+		constexpr float kFishRange = 12.0f * static_cast<float>(proto::kUnitsPerBlock);  // fish are only bucketable up close
 		constexpr float kPi = 3.14159265f;
 		constexpr float kHitMemorySeconds = 0.35f;   // how long a hit event can explain a health drop
 		constexpr float kDotFlushSeconds = 0.5f;     // magic/other damage is batched (Minecraft i-frames)
@@ -168,6 +171,46 @@ namespace skycraft
 			}
 		}
 
+		// Skyrim's fish by the names UESP lists: the vanilla ones are activators called Salmon,
+		// Abacean (sic) Longfin, Cyrodilic Spadetail, Histcarp, Silverside Perch and River Betty;
+		// Slaughterfish and the Creation Club fish are actors. Matched by whole word so "Bassianus" is no bass.
+		bool IsFishName(const char* a_name)
+		{
+			if (!a_name || !*a_name) {
+				return false;
+			}
+			static constexpr std::string_view kWords[] = {
+				"salmon", "longfin", "spadetail", "histcarp", "perch", "betty", "trout", "char", "grayling",
+				"bass", "carp", "catfish", "cod", "anthias", "fish", "pike",
+			};
+			std::string lower(a_name);
+			std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) { return char(std::tolower(c)); });
+			std::size_t i = 0;
+			while (i < lower.size()) {
+				while (i < lower.size() && !std::isalpha(static_cast<unsigned char>(lower[i]))) {
+					++i;
+				}
+				std::size_t j = i;
+				while (j < lower.size() && std::isalpha(static_cast<unsigned char>(lower[j]))) {
+					++j;
+				}
+				const std::string_view word(lower.data() + i, j - i);
+				for (auto fish : kWords) {
+					if (word == fish || (word.size() > 4 && word.ends_with("fish"))) {
+						return true;
+					}
+				}
+				i = j;
+			}
+			return false;
+		}
+
+		std::uint32_t FishFlags(RE::Actor* a_actor)
+		{
+			const char* race = a_actor->GetRace() ? a_actor->GetRace()->GetFullName() : nullptr;
+			return IsFishName(a_actor->GetDisplayFullName()) || IsFishName(race) ? proto::kActorFish : 0u;
+		}
+
 		void WriteActorTable(RE::PlayerCharacter* a_player)
 		{
 			static std::vector<proto::ActorRecord> records;
@@ -191,7 +234,7 @@ namespace skycraft
 				proto::ActorRecord r{};
 				r.formId = actor->GetFormID();
 				r.flags = (actor->IsHostileToActor(a_player) ? proto::kActorHostile : 0u) | (actor->IsDead() ? proto::kActorDead : 0u) |
-				          (actor->IsEssential() ? proto::kActorEssential : 0u) | (actor->IsInCombat() ? proto::kActorInCombat : 0u);
+				          (actor->IsEssential() ? proto::kActorEssential : 0u) | (actor->IsInCombat() ? proto::kActorInCombat : 0u) | FishFlags(actor);
 				// Hearthfire's cows and goats; matched by race name as editor IDs aren't in the game's data.
 				if (const auto* race = actor->GetRace()) {
 					// Race name, race editor ID and the actor's own name: whichever says cow or goat.
@@ -227,6 +270,44 @@ namespace skycraft
 				if (records.size() >= proto::kMaxActors) {
 					break;
 				}
+			}
+			// Vanilla fish are activators, not actors: list them too, flagged, so buckets can find them.
+			if (auto* tes = RE::TES::GetSingleton(); tes && records.size() < proto::kMaxActors) {
+				tes->ForEachReferenceInRange(a_player, kFishRange, [&](RE::TESObjectREFR* a_ref) {
+					if (!a_ref || a_ref->IsDisabled() || a_ref->IsDeleted() || !a_ref->Is3DLoaded()) {
+						return RE::BSContainer::ForEachResult::kContinue;
+					}
+					// Not just activators: a fish you harvest for meat or ingredients may be flora.
+					auto* base = a_ref->GetBaseObject();
+					if (!base || a_ref->As<RE::Actor>()) {
+						return RE::BSContainer::ForEachResult::kContinue;
+					}
+					const char* fishName = a_ref->GetDisplayFullName();
+					if (!IsFishName(fishName)) {
+						fishName = base->GetName();
+					}
+					if (!IsFishName(fishName)) {
+						return RE::BSContainer::ForEachResult::kContinue;
+					}
+					static std::unordered_set<std::uint32_t> logged;
+					if (logged.size() < 64 && logged.insert(a_ref->GetFormID()).second) {
+						logger::info("fish for buckets: '{}' ref {:08X} base {:08X} form type {}", fishName, a_ref->GetFormID(),
+							base->GetFormID(), static_cast<int>(base->GetFormType()));
+					}
+					proto::ActorRecord r{};
+					r.formId = a_ref->GetFormID();
+					r.flags = proto::kActorFish;
+					const auto mc = SkyToMc(a_ref->GetPosition());
+					r.x = static_cast<float>(mc.x);
+					r.y = static_cast<float>(mc.y);
+					r.z = static_cast<float>(mc.z);
+					r.width = 0.8f;
+					r.height = 0.5f;
+					r.healthFrac = 1.0f;
+					strncpy_s(r.name, fishName, _TRUNCATE);
+					records.push_back(r);
+					return records.size() >= proto::kMaxActors ? RE::BSContainer::ForEachResult::kStop : RE::BSContainer::ForEachResult::kContinue;
+				});
 			}
 			Link::Get().WriteActors(records.data(), static_cast<std::uint32_t>(records.size()));
 		}
@@ -907,6 +988,11 @@ namespace skycraft
 					break;
 				case proto::kEvArrowStuck:
 					WorldRender::StickArrow(ev.formId, ev.a, ev.b, ev.c, ev.d, std::bit_cast<float>(ev.flags));
+					break;
+				case proto::kEvCatchActor:
+					if (auto* caught = RE::TESForm::LookupByID<RE::TESObjectREFR>(ev.formId); caught && caught != a_player) {
+						caught->Disable();
+					}
 					break;
 				case proto::kEvSkillUse:
 					if (ev.formId >= static_cast<std::uint32_t>(RE::ActorValue::kOneHanded) && ev.formId <= static_cast<std::uint32_t>(RE::ActorValue::kEnchanting)) {

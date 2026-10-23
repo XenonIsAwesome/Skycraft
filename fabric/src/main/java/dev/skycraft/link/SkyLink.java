@@ -360,6 +360,8 @@ public final class SkyLink {
 		public int originX, originZ, worldId;
 		public final int size = WATER_GRID_SIZE;
 		public final float[] surface = new float[WATER_GRID_SIZE * WATER_GRID_SIZE];
+		public final byte[] liquid = new byte[WATER_GRID_SIZE * WATER_GRID_SIZE];
+		public final byte[] ground = new byte[WATER_GRID_SIZE * WATER_GRID_SIZE];
 	}
 
 	/** A consistent copy of the water grid, or null (no link, or Skyrim mid-write). */
@@ -384,6 +386,8 @@ public final class SkyLink {
 			out.worldId = s.get(JAVA_INT, b + WG_WORLD_ID);
 			for (int i = 0; i < out.surface.length; i++) {
 				out.surface[i] = s.get(JAVA_FLOAT, b + WG_SURFACE + i * 4L);
+				out.liquid[i] = s.get(JAVA_BYTE, b + WG_LIQUID + i);
+				out.ground[i] = s.get(JAVA_BYTE, b + WG_GROUND + i);
 			}
 			VarHandle.loadLoadFence();
 			if ((int) INT.getAcquire(s, b + WG_SEQ) == seq1) {
@@ -553,6 +557,10 @@ public final class SkyLink {
 
 		public boolean milkable() {
 			return (this.flags & ACTOR_MILKABLE) != 0;
+		}
+
+		public boolean fish() {
+			return (this.flags & ACTOR_FISH) != 0;
 		}
 	}
 

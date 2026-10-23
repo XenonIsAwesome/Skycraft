@@ -14,7 +14,7 @@ import time
 import zlib
 
 MAGIC = 0x43594B53
-VERSION = 11
+VERSION = 12
 NAME = os.environ.get("SKYCRAFT_LINK", "Local\\SkyCraft_v1")  # fake_guest.py runs one beside a real Skyrim
 # Linux bridge: same layout in a file both the native Minecraft and Skyrim-under-Proton can mmap.
 # Overridden with SKYCRAFT_LINK_FILE=<path>. Windows builds ignore this (named mapping above).
@@ -24,6 +24,7 @@ OFF_SKY = 0x100
 OFF_MC = 0x200
 OFF_OVL = 0x300
 OFF_OVL_HDR = 0x340
+OFF_WATER = 0x400
 OFF_IN = 0x1000
 OFF_ACTORS = 0x12000
 OFF_EVENTS = 0x17000
@@ -154,13 +155,36 @@ class Link:
             tail += (8 + n + 7) & ~7
         struct.pack_into("<Q", self.m, base + 0x40, tail)
 
-    def write_actor(self, form, x, y, z):
+    def write_actor(self, form, x, y, z, extra=()):
+        """The test bandit, plus `extra` (form, x, y, z, flags, width, height, name) actors."""
         struct.pack_into("<I", self.m, OFF_ACTORS, self.actor_seq * 2 + 1)
-        rec = struct.pack("<IIfffffffHH24s", form, 1, x, y, z, 90.0, 0.6, 1.8, 1.0, 10, 0, b"Test Bandit")
-        struct.pack_into("<I", self.m, OFF_ACTORS + 4, 1)
-        self.m[OFF_ACTORS + 0x40:OFF_ACTORS + 0x40 + 64] = rec
+        recs = [struct.pack("<IIfffffffHH24s", form, 1, x, y, z, 90.0, 0.6, 1.8, 1.0, 10, 0, b"Test Bandit")]
+        for f, ex, ey, ez, flags, w, h, name in extra:
+            recs.append(struct.pack("<IIfffffffHH24s", f, flags, ex, ey, ez, 90.0, w, h, 1.0, 1, 0, name))
+        struct.pack_into("<I", self.m, OFF_ACTORS + 4, len(recs))
+        self.m[OFF_ACTORS + 0x40:OFF_ACTORS + 0x40 + 64 * len(recs)] = b"".join(recs)
         self.actor_seq += 1
         struct.pack_into("<I", self.m, OFF_ACTORS, self.actor_seq * 2)
+
+    def write_water(self, lava_z, snow_z):
+        """Skyrim's WaterGrid: lava over block columns lava_z (z range), snow ground over snow_z."""
+        size = 16
+        ox, oz = X0 - size // 2, -size // 2
+        surface, liquid, ground = [], bytearray(size * size), bytearray(size * size)
+        for dz in range(size):
+            for dx in range(size):
+                z = oz + dz
+                lava = lava_z[0] <= z <= lava_z[1]
+                surface.append(FLOOR_Y + 0.3 if lava else -1.0e30)
+                liquid[dz * size + dx] = 1 if lava else 0
+                ground[dz * size + dx] = 1 if snow_z[0] <= z <= snow_z[1] else 0
+        self.water_seq = getattr(self, "water_seq", 0) + 1
+        struct.pack_into("<I", self.m, OFF_WATER, self.water_seq * 2 - 1)
+        struct.pack_into("<iiI", self.m, OFF_WATER + 4, ox, oz, 0x3C)
+        struct.pack_into("<256f", self.m, OFF_WATER + 16, *surface)
+        self.m[OFF_WATER + 16 + 1024:OFF_WATER + 16 + 1024 + 256] = bytes(liquid)
+        self.m[OFF_WATER + 16 + 1280:OFF_WATER + 16 + 1280 + 256] = bytes(ground)
+        struct.pack_into("<I", self.m, OFF_WATER, self.water_seq * 2)
 
     def mc_alive(self):
         (beat,) = struct.unpack_from("<Q", self.m, 0x18)
@@ -338,7 +362,13 @@ def main():
         if script_t0 is not None:
             t = time.time() - script_t0
             # A fake NPC two blocks ahead: punch it, then have it hit back.
-            link.write_actor(0xFF00ABCD, X0 + 2.5, FLOOR_Y, 0.5)
+            fish = []
+            if 19.0 <= t < 21.0:  # a salmon, only for the salmon bucket
+                fish = [(0xFF00F001, X0 + 0.5, FLOOR_Y + 0.4, -2.5, 0x10, 0.5, 0.4, b"Salmon")]
+            elif 25.0 <= t < 28.0:  # a fish that does not say what it is: a cod
+                fish = [(0xFF00F002, X0 + 0.5, FLOOR_Y + 0.4, -2.5, 0x10, 0.5, 0.4, b"Histcarp")]
+            link.write_actor(0xFF00ABCD, X0 + 2.5, FLOOR_Y, 0.5, fish)
+            link.write_water((-4, -2), (-9, -6))
             for click in (0.8, 1.5):  # the first click only grabs the mouse, like focusing a window
                 if click <= t < click + 0.05:
                     link.push_input(2, 1, 1)  # left mouse down
@@ -397,6 +427,20 @@ def main():
                 checked = 5
                 kinds, sel = read_world_entities(link)
                 print(f"world entities after walking over it: {kinds}")
+            # Buckets (hotbar 9, four empty ones), aimed down -Z with one right click each.
+            if 19.1 <= t < 19.15:
+                yaw = 180.0
+                link.push_input(1, 38, 1)  # '9'
+            if 19.2 <= t < 19.25:
+                link.push_input(1, 38, 0)
+            for name, start, aim in (("salmon", 19.5, 18.8), ("lava", 21.5, 35.0), ("snow", 23.5, 12.0), ("cod", 25.5, 18.8)):
+                if start - 0.3 <= t < start - 0.25:
+                    yaw, pitch = 180.0, aim
+                if start <= t < start + 0.05:
+                    print(f"  bucket test: {name} (pitch {aim}), right click")
+                    link.push_input(2, 3, 1)
+                if start + 0.1 <= t < start + 0.15:
+                    link.push_input(2, 3, 0)
             if 10 <= t and not saved:
                 frame = link.acquire_overlay()
                 if frame:

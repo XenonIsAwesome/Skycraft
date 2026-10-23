@@ -2,6 +2,7 @@ package dev.skycraft.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import dev.skycraft.world.SkyBucket;
 import dev.skycraft.world.SkyClip;
 import dev.skycraft.world.SkyClip.SkyrimHitResult;
 import dev.skycraft.world.SkyWater;
@@ -28,13 +29,19 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * An empty bucket scoops up Skyrim's water, which vanilla's fluid ray cast can't see; a full one
- * pours into the cell in front of the surface it is aimed at.
+ * Buckets fill from Skyrim's lava, snow and fish (see SkyBucket); an empty one scoops up Skyrim's
+ * water, which vanilla's fluid ray cast can't see; a full one pours into the cell in front of the
+ * surface it is aimed at.
  */
 @Mixin(BucketItem.class)
 public abstract class BucketItemMixin {
 	@Inject(method = "use", at = @At("HEAD"), cancellable = true)
 	private void skycraft$scoopSkyrimWater(Level level, Player player, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
+		InteractionResult filled = SkyBucket.use(level, player, player.getItemInHand(hand));
+		if (filled != null) {
+			cir.setReturnValue(filled);
+			return;
+		}
 		ItemStack held = player.getItemInHand(hand);
 		if (!held.is(Items.BUCKET)) {
 			return;

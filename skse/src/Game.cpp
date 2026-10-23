@@ -295,6 +295,28 @@ namespace skycraft
 			controls->ToggleControls(static_cast<F>(kWanted & ~current), true, false);
 		}
 
+		bool ContainsNoCase(const char* a_text, std::string_view a_word)
+		{
+			if (!a_text) {
+				return false;
+			}
+			std::string lower(a_text);
+			std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) { return char(std::tolower(c)); });
+			return lower.find(a_word) != std::string::npos;
+		}
+
+		// Lava is a water form that hurts: the cell's own water type, else its worldspace's.
+		bool IsLavaWater(RE::TESObjectCELL* a_cell)
+		{
+			RE::TESWaterForm* water = nullptr;
+			if (auto* extra = a_cell->extraList.GetByType<RE::ExtraCellWaterType>()) {
+				water = extra->water;
+			} else if (auto* world = a_cell->GetRuntimeData().worldSpace) {
+				water = world->worldWater;
+			}
+			return water && water->flags.any(RE::TESWaterForm::Flag::kCauseDamage);
+		}
+
 		// Skyrim's water surface over the block columns around Minecraft's player, so Minecraft
 		// swims, floats and drowns in Skyrim's lakes and rivers.
 		void WriteWaterGrid(RE::PlayerCharacter* a_player, const McVec& a_centre, std::uint32_t a_worldId)
@@ -322,7 +344,18 @@ namespace skycraft
 						columnCell->GetWaterHeight(pos, h);
 					}
 					// No water reads as a huge negative height (or NaN).
-					grid.surface[dz * kSize + dx] = (std::isfinite(h) && h > -1.0e6f) ? float(h / proto::kUnitsPerBlock) : proto::kNoWater;
+					const bool hasWater = std::isfinite(h) && h > -1.0e6f;
+				grid.surface[dz * kSize + dx] = hasWater ? float(h / proto::kUnitsPerBlock) : proto::kNoWater;
+				grid.liquid[dz * kSize + dx] = (hasWater && columnCell && IsLavaWater(columnCell)) ? proto::kLiquidLava : proto::kLiquidWater;
+				// Snow is a landscape texture whose physics material says so.
+				grid.ground[dz * kSize + dx] = proto::kGroundOther;
+				if (!cell->IsInteriorCell()) {
+					auto* land = tes->GetLandTexture(pos);
+					auto* material = land ? land->materialType : nullptr;
+					if (material && ContainsNoCase(material->materialName.c_str(), "snow")) {
+						grid.ground[dz * kSize + dx] = proto::kGroundSnow;
+					}
+				}
 				}
 			}
 			Link::Get().WriteWaterGrid(grid);

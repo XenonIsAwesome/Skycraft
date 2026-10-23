@@ -6,6 +6,12 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemUtils;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
@@ -45,6 +51,26 @@ public class SkyrimActorEntity extends LivingEntity {
 		this.noPhysics = true;
 		this.setInvisible(true);
 		this.setSilent(true);
+	}
+
+	/** Server side only: whether an empty bucket can milk this actor (a cow or goat). */
+	private boolean milkable;
+
+	public void setMilkable(boolean milkable) {
+		this.milkable = milkable;
+	}
+
+	/** An empty bucket right-clicked on a Skyrim cow or goat fills with milk, as on a Minecraft cow. */
+	@Override
+	public InteractionResult interact(Player player, InteractionHand hand, Vec3 location) {
+		ItemStack held = player.getItemInHand(hand);
+		if (this.milkable && held.is(Items.BUCKET) && !player.isSpectator()) {
+			player.playSound(SoundEvents.COW_MILK, 1.0F, 1.0F);
+			// Unlike item use, an entity interaction doesn't apply a transformed item: hand it over here.
+			player.setItemInHand(hand, ItemUtils.createFilledResult(held, player, new ItemStack(Items.MILK_BUCKET)));
+			return InteractionResult.SUCCESS;
+		}
+		return super.interact(player, hand, location);
 	}
 
 	public int formId() {

@@ -555,12 +555,12 @@ public final class SkyLink {
 			return (this.flags & ACTOR_HOSTILE) != 0;
 		}
 
-		public boolean fish() {
-			return (this.flags & ACTOR_FISH) != 0;
+		public boolean milkable() {
+			return (this.flags & ACTOR_MILKABLE) != 0;
 		}
 
-		public boolean cow() {
-			return (this.flags & ACTOR_COW) != 0;
+		public boolean fish() {
+			return (this.flags & ACTOR_FISH) != 0;
 		}
 	}
 

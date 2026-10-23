@@ -50,7 +50,7 @@ public final class SkyBucket {
 		if (entityInSight(level, player, from, to)) {
 			return null;  // a cow to milk, an axolotl to scoop: the entity's own interaction handles it
 		}
-		Catch got = creature(level, from, to, empty);
+		Catch got = fish(level, from, to);
 		if (got == null && empty) {
 			got = lavaOrSnow(level, player, from, to);
 		}
@@ -77,8 +77,8 @@ public final class SkyBucket {
 		return false;
 	}
 
-	/** The fish (as the bucket of its kind) or, for an empty bucket, the cow (milk) nearest along the segment. */
-	private static @Nullable Catch creature(Level level, Vec3 from, Vec3 to, boolean empty) {
+	/** The fish nearest along the segment, as the bucket of the Minecraft fish it most resembles. */
+	private static @Nullable Catch fish(Level level, Vec3 from, Vec3 to) {
 		List<SkyLink.Actor> actors = new ArrayList<>();
 		if (!SkyLink.readActors(actors)) {
 			return null;
@@ -86,11 +86,11 @@ public final class SkyBucket {
 		SkyLink.Actor best = null;
 		double bestDist = Double.MAX_VALUE;
 		for (SkyLink.Actor a : actors) {
-			if (a.dead() || !(a.fish() || (empty && a.cow()))) {
+			if (!a.fish() || a.dead()) {
 				continue;
 			}
 			double hw = Math.max(a.width(), 0.5F) / 2.0, h = Math.max(a.height(), 0.4F);
-			AABB box = new AABB(a.x() - hw, a.y(), a.z() - hw, a.x() + hw, a.y() + h, a.z() + hw).inflate(a.cow() ? 0.1 : 0.4);
+			AABB box = new AABB(a.x() - hw, a.y(), a.z() - hw, a.x() + hw, a.y() + h, a.z() + hw).inflate(0.4);
 			Optional<Vec3> hit = box.clip(from, to);
 			if (hit.isPresent() && from.distanceToSqr(hit.get()) < bestDist) {
 				bestDist = from.distanceToSqr(hit.get());
@@ -99,9 +99,6 @@ public final class SkyBucket {
 		}
 		if (best == null) {
 			return null;
-		}
-		if (!best.fish()) {
-			return new Catch(new ItemStack(Items.MILK_BUCKET), SoundEvents.COW_MILK, 0);
 		}
 		return new Catch(new ItemStack(bucketFor(best.name())), SoundEvents.BUCKET_FILL_FISH, best.formId());
 	}
@@ -142,11 +139,11 @@ public final class SkyBucket {
 		boolean solid = hit.getType() != HitResult.Type.MISS;
 		double solidDist = solid ? from.distanceToSqr(hit.getLocation()) : Double.MAX_VALUE;
 		if (surface != null && from.distanceToSqr(surface) < solidDist) {
-			// The water in front of the ground behind it: a lake or river is plain water, lava burns.
+			// Water in front of the ground behind it: lava is ours, plain water is for the scoop in BucketItemMixin.
 			if (SkyWater.lavaAt((int) Math.floor(surface.x), (int) Math.floor(surface.z))) {
 				return new Catch(new ItemStack(Items.LAVA_BUCKET), SoundEvents.BUCKET_FILL_LAVA, 0);
 			}
-			return new Catch(new ItemStack(Items.WATER_BUCKET), SoundEvents.BUCKET_FILL, 0);
+			return null;  // plain water: BucketItemMixin scoops it
 		}
 		// Snow: Skyrim terrain that Minecraft blocks don't cover, in a snowy column.
 		if (solid && hit instanceof SkyClip.SkyrimHitResult) {

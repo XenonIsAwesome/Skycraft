@@ -205,29 +205,10 @@ namespace skycraft
 			return false;
 		}
 
-		bool IsCowName(const char* a_name)
-		{
-			if (!a_name) {
-				return false;
-			}
-			std::string lower(a_name);
-			std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) { return char(std::tolower(c)); });
-			for (std::size_t i = lower.find("cow"); i != std::string::npos; i = lower.find("cow", i + 1)) {
-				const bool startsWord = i == 0 || !std::isalpha(static_cast<unsigned char>(lower[i - 1]));
-				const bool endsWord = i + 3 >= lower.size() || !std::isalpha(static_cast<unsigned char>(lower[i + 3]));
-				if (startsWord && endsWord) {
-					return true;
-				}
-			}
-			return false;
-		}
-
-		// Fish and cows are what a Minecraft bucket can take something from.
-		std::uint32_t BucketFlags(RE::Actor* a_actor)
+		std::uint32_t FishFlags(RE::Actor* a_actor)
 		{
 			const char* race = a_actor->GetRace() ? a_actor->GetRace()->GetFullName() : nullptr;
-			const char* name = a_actor->GetDisplayFullName();
-			return (IsFishName(name) || IsFishName(race) ? proto::kActorFish : 0u) | (IsCowName(name) || IsCowName(race) ? proto::kActorCow : 0u);
+			return IsFishName(a_actor->GetDisplayFullName()) || IsFishName(race) ? proto::kActorFish : 0u;
 		}
 
 		void WriteActorTable(RE::PlayerCharacter* a_player)
@@ -253,7 +234,24 @@ namespace skycraft
 				proto::ActorRecord r{};
 				r.formId = actor->GetFormID();
 				r.flags = (actor->IsHostileToActor(a_player) ? proto::kActorHostile : 0u) | (actor->IsDead() ? proto::kActorDead : 0u) |
-				          (actor->IsEssential() ? proto::kActorEssential : 0u) | (actor->IsInCombat() ? proto::kActorInCombat : 0u) | BucketFlags(actor);
+				          (actor->IsEssential() ? proto::kActorEssential : 0u) | (actor->IsInCombat() ? proto::kActorInCombat : 0u) | FishFlags(actor);
+				// Hearthfire's cows and goats; matched by race name as editor IDs aren't in the game's data.
+				if (const auto* race = actor->GetRace()) {
+					// Race name, race editor ID and the actor's own name: whichever says cow or goat.
+					const char* names[] = { race->GetName(), race->GetFormEditorID(), actor->GetDisplayFullName() };
+					for (const char* n : names) {
+						std::string lower = n ? n : "";
+						std::ranges::transform(lower, lower.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+						if (lower.find("cow") != std::string::npos || lower.find("goat") != std::string::npos) {
+							r.flags |= proto::kActorMilkable;
+							break;
+						}
+					}
+					static std::unordered_set<std::uint32_t> logged;
+					if (logged.insert(r.formId).second && (r.flags & proto::kActorMilkable)) {
+						logger::info("milkable actor {:08X}: race '{}' / '{}'", r.formId, race->GetName() ? race->GetName() : "", race->GetFormEditorID() ? race->GetFormEditorID() : "");
+					}
+				}
 				const auto mc = SkyToMc(pos);
 				r.x = static_cast<float>(mc.x);
 				r.y = static_cast<float>(mc.y);

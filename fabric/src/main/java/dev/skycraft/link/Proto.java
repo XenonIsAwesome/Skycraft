@@ -66,8 +66,8 @@ public final class Proto {
 	public static final int ACTOR_DEAD = 1 << 1;
 	public static final int ACTOR_ESSENTIAL = 1 << 2;
 	public static final int ACTOR_IN_COMBAT = 1 << 3;
-	public static final int ACTOR_FISH = 1 << 4;
-	public static final int ACTOR_COW = 1 << 5;
+	public static final int ACTOR_MILKABLE = 1 << 4;
+	public static final int ACTOR_FISH = 1 << 5;
 
 	// Event ring (relative to OFF_EVENT_RING)
 	public static final int EVENT_RING_ENTRIES = 512;

@@ -220,8 +220,8 @@ namespace skycraft::proto
 		kActorDead = 1u << 1,
 		kActorEssential = 1u << 2,
 		kActorInCombat = 1u << 3,
-		kActorFish = 1u << 4,  // a fish (actor, or an activator listed here): Minecraft can bucket it
-		kActorCow = 1u << 5,   // a cow: Minecraft can milk it
+		kActorMilkable = 1u << 4,  // a cow or goat: an empty bucket right-clicked on it fills with milk
+		kActorFish = 1u << 5,      // a fish (actor, or an activator listed here): Minecraft can bucket it
 	};
 
 	struct ActorRecord

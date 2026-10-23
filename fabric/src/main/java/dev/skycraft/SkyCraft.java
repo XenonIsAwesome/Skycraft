@@ -101,6 +101,7 @@ public final class SkyCraft implements ModInitializer {
 		equipIfEmpty(player, EquipmentSlot.FEET, Items.IRON_BOOTS);
 		var inventory = player.getInventory();
 		inventory.add(new ItemStack(Items.COBBLESTONE, 64));
+		inventory.add(new ItemStack(Items.BUCKET, 4));
 		inventory.add(new ItemStack(Items.STONE_BRICKS, 64));
 		inventory.add(new ItemStack(Items.OAK_LOG, 64));
 		inventory.add(new ItemStack(Items.GLASS, 64));
